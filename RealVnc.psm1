@@ -54,12 +54,16 @@ function Get-RVncEntry {
 
 function Get-RVncEntryGroup {
 	[CmdletBinding()]
-	[OutputType([RealVnc.Entry[]])]
+	[OutputType([RealVnc.EntryGroup[]])]
 	param(
 		[string]$EntryId,
 		[RealVnc.Client]$Client = $SCRIPT:CurrentClient::Client
 	)
 
 	Assert-Client $Client
-	return $EntryId ? $Client.ListEntryGroups_1($EntryId).Groups : $Client.ListEntryGroups().Groups
+	if ([String]::IsNullOrWhiteSpace($EntryId)) {
+		return $Client.ListEntryGroups().Groups
+	} else {
+		return $Client.ListEntryGroups_1($EntryId).Groups
+	}
 }

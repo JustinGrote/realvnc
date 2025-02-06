@@ -3,7 +3,7 @@
 	RootModule        = 'RealVnc.psm1'
 
 	# Version number of this module.
-	ModuleVersion     = '0.0.1'
+	ModuleVersion     = '0.0.2'
 
 	# ID used to uniquely identify this module
 	GUID              = 'b1158ed3-e07d-4e50-a1c4-281ec35be5d5'
@@ -50,9 +50,6 @@
 
 			# A URL to the main website for this project.
 			ProjectUri   = 'https://github.com/JustinGrote/RealVnc'
-
-			# ReleaseNotes of this module
-			ReleaseNotes = 'Initial Release'
 		}
 	}
 }
