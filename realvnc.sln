@@ -1,0 +1,35 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.5.2.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealVnc.Client", "RealVnc.Client\RealVnc.Client.csproj", "{4FFCA17D-B5A5-1F0A-B0A2-873DF7C090B0}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "psclient", "psclient", "{1DE3487F-7C34-D55C-5317-C5F35B821E39}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "RealVnc.Client", "psclient\RealVnc.Client\RealVnc.Client.csproj", "{76B00FDB-FA63-BA25-780F-3C6CC32FDBEE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{4FFCA17D-B5A5-1F0A-B0A2-873DF7C090B0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{4FFCA17D-B5A5-1F0A-B0A2-873DF7C090B0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{4FFCA17D-B5A5-1F0A-B0A2-873DF7C090B0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{4FFCA17D-B5A5-1F0A-B0A2-873DF7C090B0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{76B00FDB-FA63-BA25-780F-3C6CC32FDBEE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{76B00FDB-FA63-BA25-780F-3C6CC32FDBEE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{76B00FDB-FA63-BA25-780F-3C6CC32FDBEE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{76B00FDB-FA63-BA25-780F-3C6CC32FDBEE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{76B00FDB-FA63-BA25-780F-3C6CC32FDBEE} = {1DE3487F-7C34-D55C-5317-C5F35B821E39}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {64E693D3-8B73-413B-95A5-4F1F3A6A3473}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,1332 @@
+openapi: 3.0.1
+info:
+  description: |-
+    # Overview
+
+    The Gateway API is a REST API that can be used to manage your team. All endpoints use HTTPS and all requests and responses use the JSON format.
+
+    ## Paginated endpoints
+
+    Some endpoints are paginated, meaning that if there is a large number of results to return then only a subset are returned for each request. The endpoints indicate that there are more results to read by including a Link header in the response which contains the path to use to query the next page of results, e.g.:
+
+    ```Link: </service/1.0/endpoint?from=123456...>; rel="next"```
+
+    If there are no more results to read then the Link response header is omitted.
+
+    ## Versioned objects
+
+    Some objects in the database are versioned to detect and prevent concurrent modification. When reading an object, its current version is returned in the ETag response header. When modifying an object, you can pass a version in the If-Match request header. The services will then reject the modification request if the object's current version doesn't match the version passed in the header.
+
+    ## Rate limiting
+
+    Some endpoints apply rate limiting to prevent repeated calls in a short space of time, and will return _429 Too Many Requests_ if their limit is exceeded.
+  title: RealVNC Gateway Service
+  version: '1.0'
+servers:
+  - url: https://connect-api.services.vnc.com
+security:
+  - AzureKey: []
+tags:
+  - description: Each entry represents a computer on your team.
+    name: Entries
+  - description: Groups of computer entries allow you to apply permissions to many computers at once.
+    name: Entry groups
+  - description: Groups of team members allow you to apply permissions for many users at once.
+    name: User groups
+paths:
+  /1.0/audit:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_AUDIT_EVENTS` permission._
+
+        Get a list of audit events for the team.
+      operationId: getTeamEvents
+      parameters:
+        - description: 'UNIX timestamp: Filter to events after this time'
+          example: 1656675296123
+          in: query
+          name: from
+          required: true
+          schema:
+            type: string
+            description: 'UNIX timestamp: Filter to events after this time'
+            example: 1656675296123
+        - description: 'UNIX timestamp: Filter to events before this time'
+          example: 1659267296123
+          in: query
+          name: to
+          required: true
+          schema:
+            type: string
+            description: 'UNIX timestamp: Filter to events before this time'
+            example: 1659267296123
+        - description: Order of events (sorted by timestamp)
+          in: query
+          name: order
+          required: false
+          schema:
+            type: string
+            description: Order of events (sorted by timestamp)
+            default: ASC
+            enum:
+              - ASC
+              - DESC
+        - description: Identifier of the server to filter events
+          example: Xq6koj-DgZLs-rNc1ui
+          in: query
+          name: serverId
+          required: false
+          schema:
+            type: string
+            description: Identifier of the server to filter events
+            example: Xq6koj-DgZLs-rNc1ui
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AuditEventsResponse'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      summary: List team events
+      tags:
+        - Audit
+  /1.0/entries:
+    get:
+      description: |-
+        _This endpoint is [paginated](#section/Overview/Paginated-endpoints)._
+
+        _This endpoint requires a session token with the `LIST_ENTRIES` permission._
+
+        Get a list of the computers in the team. The returned computer entries are sorted alphabetically by name.
+      operationId: listEntries
+      parameters:
+        - description: Entry record identifier or prefix to list a subsequent page, obtained from a Link header
+          example: Server%20Name
+          in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            description: Entry record identifier or prefix to list a subsequent page, obtained from a Link header
+            example: Server%20Name
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListEntriesResponse'
+          description: OK
+          headers:
+            Link:
+              schema:
+                type: string
+                description: URL to the next page
+                example: </1.0/entries?from=item>; rel=next
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      summary: List entries
+      tags:
+        - Entries
+  /1.0/entries/{entryId}:
+    delete:
+      description: |-
+        _This endpoint requires a session token with the `DELETE_ENTRY` permission._
+
+        Remove a computer from the team.
+      operationId: deleteEntry
+      parameters:
+        - description: Identifier of the entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+          in: path
+          name: entryId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the entry record
+            example: cb294278ba874b9a950b4615ffdd73d7
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Remove entry
+      tags:
+        - Entries
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_ENTRIES` permission._
+
+        Get a single computer of a team.
+      operationId: readEntry
+      parameters:
+        - description: Identifier of the entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+          in: path
+          name: entryId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the entry record
+            example: cb294278ba874b9a950b4615ffdd73d7
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entry'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Read entry
+      tags:
+        - Entries
+    patch:
+      description: |-
+        _This endpoint requires a session token with the `UPDATE_ENTRY` permission._
+
+        Change the display name of a computer.
+      operationId: updateEntry
+      parameters:
+        - description: Identifier of the entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+          in: path
+          name: entryId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the entry record
+            example: cb294278ba874b9a950b4615ffdd73d7
+        - description: ETag of the previously-retrieved entry, in order to protect against simultaneous edits
+          example: '1'
+          in: header
+          name: If-Match
+          required: false
+          schema:
+            type: string
+            description: ETag of the previously-retrieved entry, in order to protect against simultaneous edits
+            example: '1'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateEntryRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Entry'
+          description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: Updated version of the object
+                example: '"1"'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '409':
+          description: Conflict
+        '412':
+          description: Precondition Failed
+      summary: Update entry
+      tags:
+        - Entries
+  /1.0/entries/{entryId}/groups:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_ENTRY_GROUPS` permission._
+
+        Get a list of all groups that contain this computer.
+      operationId: listEntryGroups_1
+      parameters:
+        - description: Identifier of the entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+          in: path
+          name: entryId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the entry record
+            example: cb294278ba874b9a950b4615ffdd73d7
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGroupsResponse'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: List groups for entry
+      tags:
+        - Entries
+  /1.0/entries/{entryId}/groups/{entryGroupId}:
+    delete:
+      description: |-
+        _This endpoint requires a session token with the `UPDATE_ENTRY_GROUP` permission._
+
+        Update a group to exclude this computer.
+      operationId: removeEntryFromGroup
+      parameters:
+        - description: Identifier of the entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+          in: path
+          name: entryId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the entry record
+            example: cb294278ba874b9a950b4615ffdd73d7
+        - description: Identifier of the group
+          example: Lk9GSQGo6B4w1cY38Pm
+          in: path
+          name: entryGroupId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the group
+            example: Lk9GSQGo6B4w1cY38Pm
+        - description: |-
+            How to handle the computer entry's removal if it ends up with no permissions
+
+            `EVERYONE`: All team members are granted access to the computer
+
+            `NO_ONE`: The computer becomes undiscoverable until new permissions are granted
+          in: query
+          name: defaultAccess
+          required: true
+          schema:
+            type: string
+            description: |-
+              How to handle the computer entry's removal if it ends up with no permissions
+
+              `EVERYONE`: All team members are granted access to the computer
+
+              `NO_ONE`: The computer becomes undiscoverable until new permissions are granted
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RemoveEntryFromGroupResponse'
+          description: OK
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Remove entry from group
+      tags:
+        - Entries
+    put:
+      description: |-
+        _This endpoint requires a session token with the `UPDATE_ENTRY_GROUP` permission._
+
+        Update a group to include this computer.
+      operationId: addEntryToGroup
+      parameters:
+        - description: Identifier of the entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+          in: path
+          name: entryId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the entry record
+            example: cb294278ba874b9a950b4615ffdd73d7
+        - description: Identifier of the group
+          example: Lk9GSQGo6B4w1cY38Pm
+          in: path
+          name: entryGroupId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the group
+            example: Lk9GSQGo6B4w1cY38Pm
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Add entry to group
+      tags:
+        - Entries
+  /1.0/entryGroups:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_ENTRY_GROUPS` permission._
+
+        Get a list of all computer groups in the team.
+      operationId: listEntryGroups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGroupsResponse'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      summary: List entry groups
+      tags:
+        - Entry groups
+  /1.0/entryGroups/{groupId}:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_ENTRY_GROUPS` permission._
+
+        Get a single computer group of the team.
+      operationId: readEntryGroup
+      parameters:
+        - description: Identifier of the computer group
+          example: Lk9GSQGo6B4w1cY38Pm
+          in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the computer group
+            example: Lk9GSQGo6B4w1cY38Pm
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/EntryGroup'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Read entry group
+      tags:
+        - Entry groups
+  /1.0/members:
+    get:
+      description: |-
+        _This endpoint is [paginated](#section/Overview/Paginated-endpoints)._
+
+        _This endpoint requires a session token with the `LIST_TEAM_MEMBERS` permission._
+
+        Get a list of the members of a team and their roles, optionally filtered by their state and role. The returned members are sorted alphabetically by email address.
+      operationId: listMembers
+      parameters:
+        - description: Email address to list a subsequent page, obtained from a `Link` header
+          example: user%40example.com
+          in: query
+          name: from
+          required: false
+          schema:
+            type: string
+            description: Email address to list a subsequent page, obtained from a `Link` header
+            example: user%40example.com
+        - description: Filter members based on membership state
+          in: query
+          name: state
+          required: false
+          schema:
+            type: string
+            description: Filter members based on membership state
+            default: JOINED
+            enum:
+              - JOINED
+              - INVITED
+        - description: Filter members to this with at least this role
+          in: query
+          name: role
+          required: false
+          schema:
+            type: string
+            enum:
+              - OWNER
+              - ADMIN
+              - MANAGER
+              - TECHNICIAN
+              - USER
+              - DELETED
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListMembersResponse'
+          description: OK
+          headers:
+            Link:
+              schema:
+                type: string
+                description: URL to the next page
+                example: </1.0/members?from=item>; rel=next
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      summary: List team members
+      tags:
+        - Members
+    post:
+      description: |-
+        _This endpoint is [rate limited](#section/Overview/Rate-limiting)._
+
+        _This endpoint requires a session token with the `ADD_TEAM_MEMBER` permission._
+
+        Send a team invitation to a non-member by email. Can't invite users with the ADMIN role or higher.
+      operationId: inviteMember
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/InviteMemberRequest'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+          description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: Updated version of the object
+                example: '"1"'
+            Location:
+              schema:
+                type: string
+                description: URL to read the new member
+                example: /1.0/members/fLSUAxoh6BSnWHfpHk6
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '429':
+          description: Too Many Requests
+      summary: Invite team member
+      tags:
+        - Members
+  /1.0/members/{userId}:
+    delete:
+      description: |-
+        _This endpoint requires a session token with the `REMOVE_TEAM_MEMBER` permission._
+
+        Remove a single member from the team. Can't remove users with the ADMIN role or higher.
+      operationId: removeMember
+      parameters:
+        - description: Identifier of the user to be removed
+          example: fLSUAxoh6BSnWHfpHk6
+          in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user to be removed
+            example: fLSUAxoh6BSnWHfpHk6
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Remove team member
+      tags:
+        - Members
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_TEAM_MEMBERS` permission._
+
+        Get a single member of the team.
+      operationId: readMember
+      parameters:
+        - description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+          in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user
+            example: fLSUAxoh6BSnWHfpHk6
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TeamMember'
+          description: OK
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: Updated version of the object
+                example: '"1"'
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Read team member
+      tags:
+        - Members
+    patch:
+      description: |-
+        _This endpoint requires a session token with the `UPDATE_TEAM_MEMBER_ROLES` permission._
+
+        Change the roles granted to a team member. Can't change roles of members with the ADMIN role or higher, nor grant those roles to members.
+      operationId: updateMemberRoles
+      parameters:
+        - description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+          in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user
+            example: fLSUAxoh6BSnWHfpHk6
+        - description: ETag of the previously-retrieved member, in order to protect against simultaneous edits
+          example: '1'
+          in: header
+          name: If-Match
+          required: true
+          schema:
+            type: string
+            description: Current version of the object
+            example: '"1"'
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateMemberRequest'
+        required: true
+      responses:
+        '204':
+          description: No Content
+          headers:
+            ETag:
+              schema:
+                type: string
+                description: Updated version of the object
+                example: '"1"'
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+        '412':
+          description: Precondition Failed
+        '428':
+          description: Precondition Required
+      summary: Update member roles
+      tags:
+        - Members
+  /1.0/members/{userId}/groups:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_USER_GROUPS` permission._
+
+        List all user groups that the given team member is a member of.
+      operationId: listMemberGroups
+      parameters:
+        - description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+          in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user
+            example: fLSUAxoh6BSnWHfpHk6
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGroupsResponse'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: List member groups
+      tags:
+        - Members
+  /1.0/members/{userId}/groups/{groupId}:
+    delete:
+      description: |-
+        _This endpoint requires a session token with the `UPDATE_USER_GROUP` permission._
+
+        Remove a team member from a user group of the team.
+      operationId: removeMemberFromGroup
+      parameters:
+        - description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+          in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user
+            example: fLSUAxoh6BSnWHfpHk6
+        - description: Identifier of the user group
+          example: 2pBGUoatuFgraJ3LSwA
+          in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user group
+            example: 2pBGUoatuFgraJ3LSwA
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Remove member from group
+      tags:
+        - Members
+    put:
+      description: |-
+        _This endpoint requires a session token with the `UPDATE_USER_GROUP` permission._
+
+        Add a team member to a user group of the team.
+      operationId: addMemberToGroup
+      parameters:
+        - description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+          in: path
+          name: userId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user
+            example: fLSUAxoh6BSnWHfpHk6
+        - description: Identifier of the user group
+          example: 2pBGUoatuFgraJ3LSwA
+          in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user group
+            example: 2pBGUoatuFgraJ3LSwA
+      responses:
+        '204':
+          description: No Content
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Add member to group
+      tags:
+        - Members
+  /1.0/presence:
+    get:
+      description: |-
+        _This endpoint is [paginated](#section/Overview/Paginated-endpoints)._
+
+        _This endpoint requires a session token with the `LIST_PRESENCE` permission._
+
+        Get a list of presence statuses for entries in the team.
+      operationId: listEntryPresence
+      parameters:
+        - description: Filter devices based on their current status
+          in: query
+          name: status
+          required: false
+          schema:
+            type: string
+            enum:
+              - ONLINE
+              - OFFLINE
+        - description: Order of entries (sorted by last seen timestamp)
+          in: query
+          name: lastSeenSort
+          required: false
+          schema:
+            type: string
+            enum:
+              - ASC
+              - DESC
+        - description: Result page number (zero-indexed)
+          in: query
+          name: page
+          required: false
+          schema:
+            minimum: 0
+            type: integer
+            description: Result page number (zero-indexed)
+            default: 0
+        - description: Amount of presence events per page
+          in: query
+          name: pageSize
+          required: false
+          schema:
+            type: integer
+            description: Amount of presence events per page
+            default: 100
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListPresenceResponse'
+          description: OK
+          headers:
+            Link:
+              schema:
+                type: string
+                description: URL to the next page
+                example: </1.0/presence?from=item>; rel=next
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      summary: List entry presence
+      tags:
+        - Presence
+  /1.0/sessions:
+    post:
+      description: |-
+        _This endpoint is [rate limited](#section/Overview/Rate-limiting)._
+
+        Exchange an access key and secret for a session token, required by the rest of the API.
+      operationId: createSession
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAccessKeySessionRequest'
+        required: true
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AccessKeySession'
+          description: Created
+        '400':
+          description: Bad Request
+        '401':
+          description: Unauthorized
+        '429':
+          description: Too Many Requests
+      security: []
+      summary: Create session
+      tags:
+        - Sessions
+  /1.0/userGroups:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_USER_GROUPS` permission._
+
+        Get a list of all user groups in the team.
+      operationId: listUserGroups
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ListGroupsResponse'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+      summary: List user groups
+      tags:
+        - User groups
+  /1.0/userGroups/{groupId}:
+    get:
+      description: |-
+        _This endpoint requires a session token with the `LIST_USER_GROUPS` permission._
+
+        Get a single user group of the team.
+      operationId: readUserGroup
+      parameters:
+        - description: Identifier of the user group
+          example: 2pBGUoatuFgraJ3LSwA
+          in: path
+          name: groupId
+          required: true
+          schema:
+            type: string
+            description: Identifier of the user group
+            example: 2pBGUoatuFgraJ3LSwA
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UserGroup'
+          description: OK
+        '401':
+          description: Unauthorized
+        '403':
+          description: Forbidden
+        '404':
+          description: Not Found
+      summary: Read user group
+      tags:
+        - User groups
+components:
+  schemas:
+    AccessKeySession:
+      type: object
+      properties:
+        expiresIn:
+          type: integer
+          description: Time in seconds until the session token expires
+          format: int64
+          example: 3600
+        token:
+          type: string
+          description: New session token
+          example: eyJ0eXAiOiJKV1QiLA0KICJhbGciOiJIUzI1NiJ9...
+    AuditEventResponse:
+      required:
+        - eventBody
+        - eventType
+        - timestamp
+      type: object
+      properties:
+        description:
+          type: string
+          description: Free-text summary of the event and referenced entities
+          example: user@example.com initiated connection to Server Name (10.100.2.4 from 10.100.11.121)
+        email:
+          type: string
+          description: Email address of the user
+          example: user@example.com
+        eventBody:
+          type: object
+          additionalProperties:
+            type: object
+            description: Event-specific data
+            example:
+              serverIp: 10.100.2.4
+              viewerIp: 10.100.11.121
+          description: Event-specific data
+          example:
+            serverIp: 10.100.2.4
+            viewerIp: 10.100.11.121
+        eventCategory:
+          type: string
+          description: Category of the event's type
+          example: SESSION_LOG
+        eventType:
+          type: string
+          description: Type of event
+          example: connection_start
+        id:
+          type: string
+          description: Identifier of the event itself
+          example: AJaAE99jUEkeAtcaZ1M
+        serverId:
+          type: string
+          description: Identifier of the server which this event relates to
+          example: Xq6koj-DgZLs-rNc1ui
+        serverName:
+          type: string
+          description: Free-text name of the server
+          example: Server Name
+        teamId:
+          type: string
+          description: Identifier of the team which this event relates to
+          example: tEkOU7emwvZsYUPHATC
+        timestamp:
+          type: integer
+          description: 'UNIX timestamp: Date and time when the event was received and processed'
+          format: int64
+          example: 1640995200123
+        userId:
+          type: string
+          description: Identifier of the user which this event relates to
+          example: fLSUAxoh6BSnWHfpHk6
+        viewerId:
+          type: string
+          description: Identifier of the viewer which this event relates to
+          example: DVRODKD0thJIv9ZT8pS
+    AuditEventsResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/AuditEventResponse'
+    CreateAccessKeySessionRequest:
+      required:
+        - accessKey
+        - accessKeyId
+      type: object
+      properties:
+        accessKey:
+          type: string
+          description: Corresponding secret for the access key
+          example: FAsFaztTmKie8akRtXZ9
+        accessKeyId:
+          type: string
+          description: Identifier of the access key
+          example: eU6ATzL5tE5Nk45gjYL
+        expiry:
+          type: string
+          description: 'ISO 8601 duration: length of time the session token should be valid for, at most 1 hour'
+          example: PT30M
+    Entry:
+      type: object
+      properties:
+        data:
+          $ref: '#/components/schemas/EntryData'
+        entryId:
+          type: string
+          description: Identifier of the computer entry record
+          example: cb294278ba874b9a950b4615ffdd73d7
+        host:
+          type: string
+          description: Hostname or IP address and port of a non-cloud-joined server
+          example: 172.16.1.1::5901
+        name:
+          type: string
+          description: Free-text name of the computer
+          example: Server Name
+        serverId:
+          type: string
+          description: Identifier of a cloud-joined server represented by this entry
+          example: Xq6koj-DgZLs-rNc1ui
+        serverLastSeenTime:
+          type: string
+          description: 'ISO 8601 timestamp: Date and time of the server''s last connection to RealVNC services'
+          example: '2022-01-01T00:00:00Z'
+    EntryData:
+      type: object
+      properties:
+        appName:
+          type: string
+          description: Name and version of the server software
+          example: vncserver/6.0.0
+        deviceForm:
+          type: string
+          description: Type of hardware of the machine
+          example: DESKTOP
+        deviceName:
+          type: string
+          description: Detected friendly name of the server
+          example: Test4
+        macAddrs:
+          type: array
+          description: MAC addresses associated with this server's network interfaces
+          example:
+            - e8-6a-64-00-00-98
+          items:
+            type: string
+        machineName:
+          type: string
+          description: Detected hostname of the server
+          example: test4.realvnc.ltd
+        osName:
+          type: string
+          description: Human-readable description of the server's operating system
+          example: Microsoft Windows 10
+    EntryGroup:
+      type: object
+      properties:
+        members:
+          type: array
+          description: Set of entries that have been added to this group
+          items:
+            $ref: '#/components/schemas/Member'
+        name:
+          type: string
+          description: Free-text title of the group
+          example: My Group
+    Group:
+      type: object
+      properties:
+        etag:
+          type: string
+          description: ETag of the group
+          example: '"1"'
+        id:
+          type: string
+          description: Identifier of the computer group
+          example: Lk9GSQGo6B4w1cY38Pm
+        lastModifiedAt:
+          type: integer
+          description: 'UNIX timestamp: Date and time of the group''s last modification'
+          format: int64
+          example: 1640995200123
+        members:
+          uniqueItems: true
+          type: array
+          description: Set of entry record identifiers for servers that have been added to this group
+          example:
+            - cb294278ba874b9a950b4615ffdd73d7
+          items:
+            type: string
+        name:
+          type: string
+          description: Free-text title of the group
+          example: My Group
+    InviteMemberRequest:
+      required:
+        - email
+        - roles
+      type: object
+      properties:
+        email:
+          type: string
+          description: Email address of the user to be invited
+          example: user@example.com
+        roles:
+          uniqueItems: true
+          type: array
+          description: Roles to be granted to the new user
+          example:
+            - USER
+            - MANAGER
+          items:
+            type: string
+            enum:
+              - USER
+              - MANAGER
+              - TECHNICIAN
+    ListEntriesResponse:
+      type: object
+      properties:
+        entries:
+          type: array
+          items:
+            $ref: '#/components/schemas/Entry'
+    ListGroupsResponse:
+      type: object
+      properties:
+        groups:
+          type: array
+          items:
+            $ref: '#/components/schemas/Group'
+    ListMembersResponse:
+      required:
+        - members
+      type: object
+      properties:
+        members:
+          type: array
+          items:
+            $ref: '#/components/schemas/TeamMember'
+    ListPresenceResponse:
+      type: object
+      properties:
+        events:
+          type: array
+          items:
+            $ref: '#/components/schemas/PresenceItem'
+    Member:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Email address of the user
+          example: user@example.com
+        id:
+          type: string
+          description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+        idpUserDisplayId:
+          type: string
+          description: Remote identifier of an organization user (SSO only)
+          example: user@example.com
+      description: Set of users that have been added to this group
+    PresenceItem:
+      type: object
+      properties:
+        lastSeen:
+          type: string
+          description: Date and time the server last contacted the services
+          format: date-time
+        serverId:
+          type: string
+          description: Identifier of the server
+          example: Xq6koj-DgZLs-rNc1ui
+        serverName:
+          type: string
+          description: Free-text name of the server
+          example: Server Name
+        status:
+          type: string
+          description: Current status of this server
+          enum:
+            - ONLINE
+            - OFFLINE
+    RemoveEntryFromGroupResponse:
+      type: object
+      properties:
+        addedEveryonePermission:
+          type: boolean
+          description: When using defaultAccess=EVERYONE, this is true if the entry was granted a default permission for everyone in the team to access it -- this happens when the entry is removed from its last group and left with no other permissions (if access was already granted for everyone, no change will be made and this value will be false)
+    TeamMember:
+      type: object
+      properties:
+        email:
+          type: string
+          description: Email address of the user
+          example: user@example.com
+        etag:
+          type: string
+          description: Version of the team membership record
+          example: '"1"'
+        id:
+          type: string
+          description: Identifier of the user
+          example: fLSUAxoh6BSnWHfpHk6
+        idpUserDisplayId:
+          type: string
+          description: Remote identifier of an organization user (SSO only)
+          example: user@example.com
+        roles:
+          uniqueItems: true
+          type: array
+          description: Roles the member has been granted
+          example:
+            - USER
+            - MANAGER
+          items:
+            type: string
+            enum:
+              - OWNER
+              - ADMIN
+              - MANAGER
+              - TECHNICIAN
+              - USER
+              - DELETED
+        state:
+          type: string
+          description: Membership state of the user
+          enum:
+            - INVITED
+            - JOINED
+    UpdateEntryRequest:
+      required:
+        - name
+      type: object
+      properties:
+        name:
+          pattern: .*[^\p{Punct}].*
+          type: string
+          description: Free-text name of the computer
+          example: Server Name
+    UpdateMemberRequest:
+      required:
+        - roles
+      type: object
+      properties:
+        roles:
+          uniqueItems: true
+          type: array
+          description: Roles to be granted to the member
+          example:
+            - USER
+            - MANAGER
+          items:
+            type: string
+            enum:
+              - USER
+              - MANAGER
+              - TECHNICIAN
+    UserGroup:
+      type: object
+      properties:
+        members:
+          type: array
+          description: Set of users that have been added to this group
+          items:
+            $ref: '#/components/schemas/Member'
+        name:
+          type: string
+          description: Free-text title of the group
+          example: My Group
+  securitySchemes:
+    Bearer:
+      description: |
+        To call this API you must first create an access key. **Make sure to keep your access key stored securely and privately**, as it grants administrative privileges to your team.
+
+        Use the Create session endpoint to exchange your access key and secret for a session token. When making subsequent API calls, the session token should be passed as a bearer token in the Authorization request header (note that the format of this header must be `Bearer SESSION_TOKEN`).
+
+        ### Permissions
+
+        Each access key has an associated set of permissions that control which actions a given key can perform against your team. For each endpoint, the session token must have the correct permissions to call the endpoint, otherwise the request will fail. The documentation of each endpoint notes which permissions are required to call it.
+
+        | Value | Description |
+        | ----- | ----------- |
+        | `LIST_TEAM_MEMBERS` | Read and list members of the team |
+        | `ADD_TEAM_MEMBER` | Invite users to the team |
+        | `UPDATE_TEAM_MEMBER_ROLES` | Change roles of members |
+        | `REMOVE_TEAM_MEMBER` | Remove members from the team |
+        | `LIST_USER_GROUPS` | Read and list groups of users |
+        | `UPDATE_USER_GROUP` | Add or remove users from groups |
+        | `LIST_ENTRIES` | Read and list servers |
+        | `UPDATE_ENTRY` | Rename a server |
+        | `DELETE_ENTRY` | Remove a server from the team |
+        | `LIST_ENTRY_GROUPS` | Read and list groups of servers |
+        | `UPDATE_ENTRY_GROUP` | Add or remove servers from groups |
+        | `LIST_AUDIT_EVENTS` | Read audit logs for the team |
+        | `LIST_PRESENCE` | Read device presence for servers |
+      scheme: Bearer
+      type: http
+    AzureKey:
+      type: apiKey
+      in: header
+      name: Authorization
