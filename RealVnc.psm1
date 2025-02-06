@@ -2,20 +2,24 @@ using namespace RealVnc
 Add-Type -Path $PSScriptRoot/bin/RealVnc.Client.dll
 $ErrorActionPreference = 'Stop'
 
-$SCRIPT:CurrentClient = [RealVnc.CurrentClient]
 
 function Connect-RVnc {
 	[CmdletBinding()]
 	[OutputType([RealVnc.Client])]
 	param(
 		[ValidateNotNullOrEmpty()]
+		#Specify your API Key ID as the username and the API Key as the password
 		[PSCredential]$Credential = $(Get-Credential),
-		[Switch]$Force
+		#Replace any existing connections
+		[Switch]$Force,
+		#Dont set as the current client, return only
+		[Switch]$NoDefault
+
 	)
 
-	if ($SCRIPT:CurrentClient::Client -and -not $Force) {
+	if ([RealVnc.CurrentClient]::Client -and -not $Force) {
 		Write-Warning 'A connection is already established. Use -Force to reconnect.'
-		return $SCRIPT:CurrentClient::Client
+		return [RealVnc.CurrentClient]::Client
 	}
 
 	$newClient = [RealVnc.Client]::new()
@@ -28,9 +32,11 @@ function Connect-RVnc {
 		throw 'Authentiation response was received but Token was not present. This is probably a bug.'
 	}
 	$newClient.AuthToken = $authResponse.Token
-	$SCRIPT:CurrentClient::Client = $newClient
+	if (-not $NoDefault) {
+		[RealVnc.CurrentClient]::Client = $newClient
+	}
 
-	return $SCRIPT:CurrentClient::Client
+	return [RealVnc.CurrentClient]::Client
 }
 
 function Assert-Client ($Client) {
@@ -42,10 +48,10 @@ function Assert-Client ($Client) {
 
 function Get-RVncEntry {
 	[CmdletBinding()]
-	[OutputType([RealVnc.Entry[]])]
+	[OutputType([RealVnc.Entry])]
 	param(
 		[string]$From = [String]::Empty,
-		[RealVnc.Client]$Client = $SCRIPT:CurrentClient::Client
+		[RealVnc.Client]$Client = [RealVnc.CurrentClient]::Client
 	)
 
 	Assert-Client $Client
@@ -54,10 +60,10 @@ function Get-RVncEntry {
 
 function Get-RVncEntryGroup {
 	[CmdletBinding()]
-	[OutputType([RealVnc.EntryGroup[]])]
+	[OutputType([RealVnc.EntryGroup])]
 	param(
 		[string]$EntryId,
-		[RealVnc.Client]$Client = $SCRIPT:CurrentClient::Client
+		[RealVnc.Client]$Client = [RealVnc.CurrentClient]::Client
 	)
 
 	Assert-Client $Client

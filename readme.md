@@ -33,6 +33,36 @@ For methods that have bodies, you can use the type and a hashtable to get intell
 
 ![alt text](images/readme/image-2.png)
 
+The module is also thread-safe and the default login context persists across runspaces, so it can be used with `Foreach-Object -Parallel`
+
+```
+❯ 1..10 |% -parallel {Get-RvncEntryGroup} | ft name,id
+
+Name       Id
+----       --
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+TestGroup1 w7DGS4LY31meY5np8WS
+TestGroup2 CuMGSJwxwch84WDwQh5
+```
+
+
 ## Building the Module
 
 You need NSwag installed, recommend using the MSI to install. Then just run `.\build.ps1` and the module will be available in the `dist` directory.
